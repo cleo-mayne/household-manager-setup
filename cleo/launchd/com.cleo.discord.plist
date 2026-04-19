@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Long-running Discord bot. Drop into ~/Library/LaunchAgents/ and:
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.cleo.discord.plist
+
+  Replace __CLEO_DIR__ and __PYTHON__ before installing.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cleo.discord</string>
+
+    <key>WorkingDirectory</key>
+    <string>__CLEO_DIR__</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PYTHON__</string>
+        <string>-m</string>
+        <string>cleo.discord_handler</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>__CLEO_DIR__/src</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>__CLEO_DIR__/logs/discord.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__CLEO_DIR__/logs/discord.err.log</string>
+</dict>
+</plist>

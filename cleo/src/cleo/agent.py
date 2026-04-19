@@ -1,0 +1,56 @@
+"""Shared Claude Agent SDK options + query helpers.
+
+The two entry points:
+- `run_one_shot(prompt, *, nanny_mode, writable)` for stateless pipeline calls
+  (morning-brief, inbox-triage, etc.)
+- `ConversationStore.reply(channel_id, prompt, *, nanny_mode, writable)` for
+  multi-turn chat where we want continuity across messages in a channel.
+"""
+
+from __future__ import annotations
+
+from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, query
+
+from .config import Settings, system_prompt
+
+FULL_TOOLS = ["Read", "Glob", "Grep", "Write", "Edit", "Bash"]
+READ_ONLY_TOOLS = ["Read", "Glob", "Grep"]
+
+
+def build_options(
+    settings: Settings,
+    *,
+    nanny_mode: bool,
+    writable: bool,
+) -> ClaudeAgentOptions:
+    tools = FULL_TOOLS if writable else READ_ONLY_TOOLS
+    return ClaudeAgentOptions(
+        model=settings.model,
+        system_prompt=system_prompt(nanny_mode=nanny_mode),
+        allowed_tools=tools,
+        mcp_servers={
+            "brain": {
+                "command": settings.brain_mcp_cmd,
+                "args": settings.brain_mcp_args,
+                "env": {"OBSIDIAN_VAULT": str(settings.obsidian_vault)},
+            }
+        },
+        permission_mode="acceptEdits" if writable else "dontAsk",
+    )
+
+
+async def run_one_shot(
+    settings: Settings,
+    prompt: str,
+    *,
+    nanny_mode: bool = False,
+    writable: bool = False,
+) -> str:
+    """Stateless call — returns the final assistant text."""
+    options = build_options(settings, nanny_mode=nanny_mode, writable=writable)
+    chunks: list[str] = []
+    async for event in query(prompt=prompt, options=options):
+        text = getattr(event, "text", None)
+        if event.type == "assistant" and text:
+            chunks.append(text)
+    return "\n".join(chunks).strip()

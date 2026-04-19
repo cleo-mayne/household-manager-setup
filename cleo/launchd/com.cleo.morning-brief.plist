@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Daily 8:00am morning brief. Replace __CLEO_DIR__ and __PYTHON__ before installing.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cleo.morning-brief</string>
+
+    <key>WorkingDirectory</key>
+    <string>__CLEO_DIR__</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PYTHON__</string>
+        <string>-m</string>
+        <string>cleo.scheduled.morning_brief</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>__CLEO_DIR__/src</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>8</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>__CLEO_DIR__/logs/morning-brief.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__CLEO_DIR__/logs/morning-brief.err.log</string>
+</dict>
+</plist>
