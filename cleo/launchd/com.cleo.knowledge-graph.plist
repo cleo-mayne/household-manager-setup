@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Knowledge-graph backlink suggestions, daily 6am. Replace __CLEO_DIR__ and __PYTHON__.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cleo.knowledge-graph</string>
+
+    <key>WorkingDirectory</key>
+    <string>__CLEO_DIR__</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PYTHON__</string>
+        <string>-m</string>
+        <string>cleo.scheduled.knowledge_graph</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>__CLEO_DIR__/src</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>6</integer>
+        <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>__CLEO_DIR__/logs/knowledge-graph.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__CLEO_DIR__/logs/knowledge-graph.err.log</string>
+</dict>
+</plist>

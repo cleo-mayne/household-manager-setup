@@ -14,13 +14,22 @@ cleo/
 ├── src/cleo/
 │   ├── config.py            # env loading, persona selection
 │   ├── agent.py             # ClaudeAgentOptions builder + one-shot helper
+│   ├── permissions.py       # can_use_tool callback (path scoping, bash blocklist)
 │   ├── conversation.py      # per-channel ClaudeSDKClient sessions (multi-turn memory)
-│   ├── discord_handler.py   # @mention listener, /reset slash command, persona switching
+│   ├── discord_handler.py   # @mention listener, /reset, persona switching
+│   ├── imessage_handler.py  # BlueBubbles webhook receiver, same ConversationStore
 │   └── scheduled/
-│       └── morning_brief.py # 8am pipeline → Discord webhook
+│       ├── morning_brief.py   # 8am → #daily-brief
+│       ├── inbox_triage.py    # hourly-ish → files vault/inbox/
+│       ├── vault_health.py    # Sunday 7am → #cleo-log
+│       └── knowledge_graph.py # daily 6am → link suggestions → #cleo-log
 └── launchd/
     ├── com.cleo.discord.plist
-    └── com.cleo.morning-brief.plist
+    ├── com.cleo.imessage.plist
+    ├── com.cleo.morning-brief.plist
+    ├── com.cleo.inbox-triage.plist
+    ├── com.cleo.vault-health.plist
+    └── com.cleo.knowledge-graph.plist
 ```
 
 ## Setup
@@ -41,15 +50,27 @@ cp .env.example .env     # fill in tokens
 - `NANNY_CHANNEL_IDS` — comma-separated channel IDs where Cleo uses nanny-mode persona
 - `OBSIDIAN_VAULT` — absolute path to the vault
 - `DISCORD_DAILY_BRIEF_WEBHOOK` — webhook URL for the #daily-brief channel
+- `DISCORD_CLEO_LOG_WEBHOOK` — webhook URL for #cleo-log (pipeline output)
+
+### iMessage (optional)
+- `BLUEBUBBLES_URL`, `BLUEBUBBLES_PASSWORD` — self-hosted BlueBubbles server
+- `IMESSAGE_LISTEN_HOST`, `IMESSAGE_LISTEN_PORT` — where the bridge receives BlueBubbles webhooks
+- `TRUSTED_IMESSAGE_HANDLES` — comma-separated emails/phone numbers granted full tool access
+
+Point BlueBubbles' new-message webhook at `http://<host>:<port>/webhook`.
 
 ## Run locally
 
 ```bash
-# Discord bot (long-running)
+# Long-running services
 python -m cleo.discord_handler
+python -m cleo.imessage_handler
 
-# One-shot morning brief (for testing)
+# One-shot pipelines (for testing — launchd runs them on schedule)
 python -m cleo.scheduled.morning_brief
+python -m cleo.scheduled.inbox_triage
+python -m cleo.scheduled.vault_health
+python -m cleo.scheduled.knowledge_graph
 ```
 
 ## Install under launchd
@@ -85,13 +106,23 @@ launchctl bootout gui/$(id -u)/com.cleo.discord
 
 Untrusted message content is never treated as instructions — the system prompt frames every incoming message as `[channel: X] sender: message` so the model sees it as data.
 
+## Permission model (`permissions.py`)
+
+Defence-in-depth on top of `allowed_tools`. The `can_use_tool` callback inspects every tool call and can deny or rewrite it before it runs:
+
+- **Nanny mode:** Write / Edit / Bash always denied.
+- **Read-only contexts (untrusted senders):** Write / Edit / Bash denied.
+- **Writes:** must land under `$OBSIDIAN_VAULT/inbox/` or `$OBSIDIAN_VAULT/daily/`. Writes elsewhere — plugins, config, `.obsidian/` — are rejected.
+- **Bash:** blocks `rm -rf`, fork bombs, `dd if=`, `curl … | sh`, `sudo`, `mkfs`/`fdisk`.
+
+Tune in `permissions.py`. The callback is wired automatically via `build_options()`.
+
 ## What's not here yet
 
-- iMessage handler (BlueBubbles bridge) — one more module in the same shape as `discord_handler.py`, feeding into the same `ConversationStore`.
-- Ports of `inbox-triage.lobster`, `vault-health.lobster`, `knowledge-graph.lobster` — each becomes a file in `scheduled/` with a `launchd` plist.
 - ElevenLabs `sag` voice handoff — wire after reply text is produced.
-- `canUseTool` callback for per-tool fine-grained gating.
 - Prompt caching — add `cache_control` blocks on the system prompt once the SDK version is pinned.
+- Discord interactive components (buttons on task/grocery messages).
+- Alert-fanout helper for pipeline failures (`#alerts` webhook on non-zero exit).
 
 ## Migrating from OpenClaw
 

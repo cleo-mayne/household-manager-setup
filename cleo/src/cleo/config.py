@@ -20,6 +20,13 @@ def _ids(var: str) -> set[int]:
     return {int(x) for x in raw.split(",") if x.strip()}
 
 
+def _handles(var: str) -> set[str]:
+    raw = os.getenv(var, "").strip()
+    if not raw:
+        return set()
+    return {x.strip() for x in raw.split(",") if x.strip()}
+
+
 @dataclass(frozen=True)
 class Settings:
     anthropic_api_key: str
@@ -33,6 +40,13 @@ class Settings:
     brain_mcp_args: list[str]
     daily_brief_webhook: str
     alerts_webhook: str
+    cleo_log_webhook: str
+    # iMessage (BlueBubbles)
+    bluebubbles_url: str
+    bluebubbles_password: str
+    imessage_listen_host: str
+    imessage_listen_port: int
+    trusted_imessage_handles: frozenset[str]
 
 
 def load() -> Settings:
@@ -48,6 +62,12 @@ def load() -> Settings:
         brain_mcp_args=os.getenv("BRAIN_MCP_ARGS", "-m,brain.mcp_server").split(","),
         daily_brief_webhook=os.getenv("DISCORD_DAILY_BRIEF_WEBHOOK", ""),
         alerts_webhook=os.getenv("DISCORD_ALERTS_WEBHOOK", ""),
+        cleo_log_webhook=os.getenv("DISCORD_CLEO_LOG_WEBHOOK", ""),
+        bluebubbles_url=os.getenv("BLUEBUBBLES_URL", "http://localhost:1234"),
+        bluebubbles_password=os.getenv("BLUEBUBBLES_PASSWORD", ""),
+        imessage_listen_host=os.getenv("IMESSAGE_LISTEN_HOST", "127.0.0.1"),
+        imessage_listen_port=int(os.getenv("IMESSAGE_LISTEN_PORT", "8787")),
+        trusted_imessage_handles=frozenset(_handles("TRUSTED_IMESSAGE_HANDLES")),
     )
 
 

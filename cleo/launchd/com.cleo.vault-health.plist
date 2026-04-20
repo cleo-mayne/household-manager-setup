@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Weekly vault health scan, Sundays 7am. Replace __CLEO_DIR__ and __PYTHON__.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cleo.vault-health</string>
+
+    <key>WorkingDirectory</key>
+    <string>__CLEO_DIR__</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PYTHON__</string>
+        <string>-m</string>
+        <string>cleo.scheduled.vault_health</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>__CLEO_DIR__/src</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key><integer>0</integer>
+        <key>Hour</key><integer>7</integer>
+        <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>__CLEO_DIR__/logs/vault-health.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__CLEO_DIR__/logs/vault-health.err.log</string>
+</dict>
+</plist>

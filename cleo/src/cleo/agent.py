@@ -12,6 +12,7 @@ from __future__ import annotations
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, query
 
 from .config import Settings, system_prompt
+from .permissions import build_can_use_tool
 
 FULL_TOOLS = ["Read", "Glob", "Grep", "Write", "Edit", "Bash"]
 READ_ONLY_TOOLS = ["Read", "Glob", "Grep"]
@@ -28,6 +29,9 @@ def build_options(
         model=settings.model,
         system_prompt=system_prompt(nanny_mode=nanny_mode),
         allowed_tools=tools,
+        can_use_tool=build_can_use_tool(
+            settings, nanny_mode=nanny_mode, writable=writable
+        ),
         mcp_servers={
             "brain": {
                 "command": settings.brain_mcp_cmd,
