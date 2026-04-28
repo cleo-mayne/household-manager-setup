@@ -2,6 +2,8 @@
 
 Replacement for the OpenClaw-hosted Cleo. Python, `claude-agent-sdk`, `discord.py`, launchd.
 
+**Deploying for the first time?** See [DEPLOY.md](DEPLOY.md) for the end-to-end runbook.
+
 ## Layout
 
 ```
