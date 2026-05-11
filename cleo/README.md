@@ -36,13 +36,13 @@ cleo/
     └── com.cleo.qmd-reindex.plist
 ```
 
-## Search: qmd
+## Search: qmd (brain_search retired)
 
-Vault search runs through [qmd](https://github.com/tobi/qmd) — a local hybrid search engine (BM25 + vector + LLM rerank, all-local via GGUF models) that ships its own MCP server. Wired in `agent.py` as the `qmd` MCP server alongside `brain`. The system prompt tells Cleo to prefer `qmd.query` over `Grep` for any "find / search / what do my notes say about X" request.
+Vault search runs through [qmd](https://github.com/tobi/qmd) — a local hybrid search engine (BM25 + vector + LLM rerank, all-local via GGUF models) that ships its own MCP server. Wired in `agent.py` as the `qmd` MCP server. The `brain` MCP server is still wired for `brain_capture` and `brain_health`, but `brain_search` is **explicitly retired** — `permissions.py` denies any `mcp__brain__search` call when qmd is enabled, and the system prompt tells Cleo qmd is the only sanctioned search path.
 
 - **Index**: `~/.cache/qmd/index.sqlite` (auto-managed by qmd)
 - **Reindex**: hourly via `scheduled/qmd_reindex.py` (`qmd embed`)
-- **Disable**: set `QMD_ENABLED=false` in `.env` to fall back to the old brain-only search path
+- **Disable / fall back**: set `QMD_ENABLED=false` in `.env` and the permission gate lifts, brain_search becomes callable again.
 
 See [DEPLOY.md](DEPLOY.md) for one-time qmd setup (npm install, collection add, initial embed).
 

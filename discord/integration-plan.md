@@ -33,14 +33,14 @@ Cleo (bot)
 
 | Command | Description | Maps To |
 |---|---|---|
-| `/search <query>` | Semantic search across vault | `brain search` → vault-index.py |
+| `/search <query>` | Hybrid search across vault | `qmd query` MCP tool (BM25 + vector + LLM rerank) |
 | `/task <text>` | Quick-add task via Todoist NLP | Todoist Quick Add API |
 | `/inbox` | Show inbox items | `brain inbox` |
 | `/health` | Vault health summary | `brain-health --report` |
 | `/capture <text>` | Save note to vault inbox | `brain_capture` MCP tool |
 | `/brief` | Trigger morning briefing now | `morning-brief` pipeline |
-| `/links` | Show recent link suggestions | `brain-link --scan | --suggest` |
-| `/stats` | Vault and task statistics | `brain stats` + Todoist stats |
+| `/links` | Show recent link suggestions | `knowledge-graph` pipeline output |
+| `/stats` | Vault and task statistics | `qmd status` + Todoist stats |
 
 ## Webhook Integrations
 

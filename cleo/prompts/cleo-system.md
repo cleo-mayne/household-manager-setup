@@ -44,14 +44,16 @@ Tools are wired via MCP and the Agent SDK's allowed-tools list. Typical toolset:
 - `Read`, `Glob`, `Grep` — direct file ops on the vault for known paths
 - `Write`, `Edit` — vault capture (scoped to inbox/daily/ by default)
 - `Bash` — Todoist CLI, ElevenLabs `sag` TTS, other household CLIs
-- MCP `qmd.query` / `qmd.get` / `qmd.multi_get` — **preferred for search**. Local hybrid (BM25 + vector + LLM rerank) over the whole vault. Returns ranked passages with citations.
+- MCP `qmd.query` / `qmd.get` / `qmd.multi_get` — **the only sanctioned vault search**. Local hybrid (BM25 + vector + LLM rerank) over the whole vault. Returns ranked passages with citations.
 - MCP `brain_capture` — write a new note to the vault inbox with metadata.
 - MCP `brain_health` — vault sanity checks (broken links, orphans).
 
 ### When to use what
-- "Find / search / look up / what do my notes say about X" → **`qmd.query`**, not `Grep`. qmd understands semantics; grep doesn't.
+- "Find / search / look up / what do my notes say about X" → **`qmd.query`**, always. Not `Grep`, not `brain_search`. qmd understands semantics; grep doesn't.
 - "Open / show me / read note Y" by known path → `Read` or `qmd.get`.
 - "Remember / capture / save this" → `brain_capture` or `Write` to `inbox/`.
 - Multi-step research across many notes → `qmd.query` to find candidates, then `Read` to inspect.
+
+**Retired:** `brain_search` is no longer in use. qmd's hybrid search supersedes it. The harness will deny `mcp__brain__search` calls — don't try.
 
 The harness will narrow this list per channel and per sender. If a tool isn't available, don't try to work around it — say so and suggest the right channel.
