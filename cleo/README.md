@@ -24,15 +24,27 @@ cleo/
 │       ├── morning_brief.py   # 8am → #daily-brief
 │       ├── inbox_triage.py    # hourly-ish → files vault/inbox/
 │       ├── vault_health.py    # Sunday 7am → #cleo-log
-│       └── knowledge_graph.py # daily 6am → link suggestions → #cleo-log
+│       ├── knowledge_graph.py # daily 6am → link suggestions → #cleo-log
+│       └── qmd_reindex.py     # hourly → refresh qmd vault embeddings
 └── launchd/
     ├── com.cleo.discord.plist
     ├── com.cleo.imessage.plist
     ├── com.cleo.morning-brief.plist
     ├── com.cleo.inbox-triage.plist
     ├── com.cleo.vault-health.plist
-    └── com.cleo.knowledge-graph.plist
+    ├── com.cleo.knowledge-graph.plist
+    └── com.cleo.qmd-reindex.plist
 ```
+
+## Search: qmd
+
+Vault search runs through [qmd](https://github.com/tobi/qmd) — a local hybrid search engine (BM25 + vector + LLM rerank, all-local via GGUF models) that ships its own MCP server. Wired in `agent.py` as the `qmd` MCP server alongside `brain`. The system prompt tells Cleo to prefer `qmd.query` over `Grep` for any "find / search / what do my notes say about X" request.
+
+- **Index**: `~/.cache/qmd/index.sqlite` (auto-managed by qmd)
+- **Reindex**: hourly via `scheduled/qmd_reindex.py` (`qmd embed`)
+- **Disable**: set `QMD_ENABLED=false` in `.env` to fall back to the old brain-only search path
+
+See [DEPLOY.md](DEPLOY.md) for one-time qmd setup (npm install, collection add, initial embed).
 
 ## Setup
 

@@ -9,6 +9,7 @@ End-to-end: clean Mac Studio → Cleo running 24/7 under launchd. ~60–90 min i
 ## 0. Prerequisites on the Mac Studio
 
 - macOS with Python 3.11+ (`brew install python@3.11` if needed)
+- Node.js ≥ 22 or Bun ≥ 1.0 (for `qmd`)
 - The Obsidian vault on disk at a known path
 - The existing `brain` MCP server (`python -m brain.mcp_server`) reachable from the venv — either pip-install it or vendor it under `cleo/`
 - BlueBubbles server already running locally (separate setup; see https://bluebubbles.app)
@@ -33,6 +34,38 @@ cp .env.example .env
 ```
 
 Don't fill `.env` yet — we need a few IDs first.
+
+---
+
+## 1b. Install and prime qmd
+
+Cleo uses [qmd](https://github.com/tobi/qmd) as its primary vault search backend (local hybrid BM25 + vector + LLM rerank).
+
+```bash
+# Install globally
+npm install -g @tobilu/qmd   # or: bun install -g @tobilu/qmd
+
+# Verify
+qmd --version
+which qmd                    # capture this path → QMD_BIN in .env if not on $PATH
+
+# Point qmd at the Obsidian vault. The collection name "vault" is what
+# Cleo's QMD_COLLECTION env var defaults to.
+qmd collection add "$OBSIDIAN_VAULT" --name vault
+qmd context add qmd://vault "Household Obsidian vault — notes, daily, projects, people"
+
+# Build the initial index. First run downloads ~2GB of GGUF models and
+# embeds the vault — expect 5-30 minutes depending on vault size.
+qmd embed
+
+# Sanity-check
+qmd query "test query that should match something in your vault"
+qmd status
+```
+
+`qmd_reindex.py` keeps the index fresh hourly under launchd; the initial run above is the only manual step.
+
+If you don't want qmd (yet), set `QMD_ENABLED=false` in `.env` and skip this section — Cleo falls back to `brain` MCP for search.
 
 ---
 
@@ -123,7 +156,8 @@ done
 
 # Load each one
 for label in com.cleo.discord com.cleo.imessage com.cleo.morning-brief \
-             com.cleo.inbox-triage com.cleo.vault-health com.cleo.knowledge-graph; do
+             com.cleo.inbox-triage com.cleo.vault-health com.cleo.knowledge-graph \
+             com.cleo.qmd-reindex; do
   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/$label.plist
 done
 
@@ -146,7 +180,7 @@ launchctl kickstart -p gui/$(id -u)/com.cleo.morning-brief
 tail -f logs/morning-brief.err.log
 
 # Sanity-check launchd's view of each job
-for label in discord imessage morning-brief inbox-triage vault-health knowledge-graph; do
+for label in discord imessage morning-brief inbox-triage vault-health knowledge-graph qmd-reindex; do
   launchctl print gui/$(id -u)/com.cleo.$label | grep -E '(state|last exit|pid)' | head -3
   echo "---"
 done
@@ -176,7 +210,7 @@ Each piece is independently reversible.
 launchctl bootout gui/$(id -u)/com.cleo.discord
 
 # Stop everything
-for label in discord imessage morning-brief inbox-triage vault-health knowledge-graph; do
+for label in discord imessage morning-brief inbox-triage vault-health knowledge-graph qmd-reindex; do
   launchctl bootout gui/$(id -u)/com.cleo.$label || true
 done
 

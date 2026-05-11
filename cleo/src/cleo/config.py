@@ -47,6 +47,10 @@ class Settings:
     imessage_listen_host: str
     imessage_listen_port: int
     trusted_imessage_handles: frozenset[str]
+    # qmd (local hybrid search over the vault)
+    qmd_enabled: bool
+    qmd_bin: str
+    qmd_collection: str
 
 
 def load() -> Settings:
@@ -68,6 +72,9 @@ def load() -> Settings:
         imessage_listen_host=os.getenv("IMESSAGE_LISTEN_HOST", "127.0.0.1"),
         imessage_listen_port=int(os.getenv("IMESSAGE_LISTEN_PORT", "8787")),
         trusted_imessage_handles=frozenset(_handles("TRUSTED_IMESSAGE_HANDLES")),
+        qmd_enabled=os.getenv("QMD_ENABLED", "true").lower() in {"1", "true", "yes"},
+        qmd_bin=os.getenv("QMD_BIN", "qmd"),
+        qmd_collection=os.getenv("QMD_COLLECTION", "vault"),
     )
 
 

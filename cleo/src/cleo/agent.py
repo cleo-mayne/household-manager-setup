@@ -25,6 +25,23 @@ def build_options(
     writable: bool,
 ) -> ClaudeAgentOptions:
     tools = FULL_TOOLS if writable else READ_ONLY_TOOLS
+
+    mcp_servers: dict[str, dict] = {
+        "brain": {
+            "command": settings.brain_mcp_cmd,
+            "args": settings.brain_mcp_args,
+            "env": {"OBSIDIAN_VAULT": str(settings.obsidian_vault)},
+        },
+    }
+    if settings.qmd_enabled:
+        # qmd's MCP server: hybrid BM25 + vector + LLM rerank search over the vault.
+        # `qmd mcp` speaks MCP on stdio; the index lives at ~/.cache/qmd/index.sqlite
+        # and is built by `qmd embed` (see scheduled/qmd_reindex.py).
+        mcp_servers["qmd"] = {
+            "command": settings.qmd_bin,
+            "args": ["mcp"],
+        }
+
     return ClaudeAgentOptions(
         model=settings.model,
         system_prompt=system_prompt(nanny_mode=nanny_mode),
@@ -32,13 +49,7 @@ def build_options(
         can_use_tool=build_can_use_tool(
             settings, nanny_mode=nanny_mode, writable=writable
         ),
-        mcp_servers={
-            "brain": {
-                "command": settings.brain_mcp_cmd,
-                "args": settings.brain_mcp_args,
-                "env": {"OBSIDIAN_VAULT": str(settings.obsidian_vault)},
-            }
-        },
+        mcp_servers=mcp_servers,
         permission_mode="acceptEdits" if writable else "dontAsk",
     )
 
