@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Daily 9pm end-of-day digest. Replace __CLEO_DIR__ and __PYTHON__.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cleo.eod-digest</string>
+
+    <key>WorkingDirectory</key>
+    <string>__CLEO_DIR__</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PYTHON__</string>
+        <string>-m</string>
+        <string>cleo.scheduled.eod_digest</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>__CLEO_DIR__/src</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>21</integer>
+        <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>__CLEO_DIR__/logs/eod-digest.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__CLEO_DIR__/logs/eod-digest.err.log</string>
+</dict>
+</plist>

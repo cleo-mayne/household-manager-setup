@@ -37,6 +37,25 @@ Don't fill `.env` yet — we need a few IDs first.
 
 ---
 
+## 1a. Scaffold the vault (PARA + CLEO.md)
+
+Cleo expects the vault to follow the PARA convention plus a root state file.
+
+```bash
+cd "$OBSIDIAN_VAULT"
+mkdir -p projects areas resources archives inbox daily people skills
+
+# CLEO.md at the vault root — Cleo reads this at session start
+cp ~/code/household-manager-setup/cleo/templates/CLEO.md "$OBSIDIAN_VAULT/CLEO.md"
+$EDITOR "$OBSIDIAN_VAULT/CLEO.md"
+```
+
+Edit `CLEO.md` to reflect actual people, projects, areas, and standing context. It's the family's working memory — keep it short, keep it current. `eod-digest` will append daily entries to its running log automatically.
+
+If you want personal/vault-specific skills that override the repo defaults, drop them in `$OBSIDIAN_VAULT/skills/<name>.md`.
+
+---
+
 ## 1b. Install and prime qmd
 
 Cleo uses [qmd](https://github.com/tobi/qmd) as its primary vault search backend (local hybrid BM25 + vector + LLM rerank).
@@ -156,8 +175,8 @@ done
 
 # Load each one
 for label in com.cleo.discord com.cleo.imessage com.cleo.morning-brief \
-             com.cleo.inbox-triage com.cleo.vault-health com.cleo.knowledge-graph \
-             com.cleo.qmd-reindex; do
+             com.cleo.eod-digest com.cleo.inbox-triage com.cleo.vault-health \
+             com.cleo.knowledge-graph com.cleo.qmd-reindex; do
   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/$label.plist
 done
 
@@ -180,7 +199,7 @@ launchctl kickstart -p gui/$(id -u)/com.cleo.morning-brief
 tail -f logs/morning-brief.err.log
 
 # Sanity-check launchd's view of each job
-for label in discord imessage morning-brief inbox-triage vault-health knowledge-graph qmd-reindex; do
+for label in discord imessage morning-brief eod-digest inbox-triage vault-health knowledge-graph qmd-reindex; do
   launchctl print gui/$(id -u)/com.cleo.$label | grep -E '(state|last exit|pid)' | head -3
   echo "---"
 done
@@ -210,7 +229,7 @@ Each piece is independently reversible.
 launchctl bootout gui/$(id -u)/com.cleo.discord
 
 # Stop everything
-for label in discord imessage morning-brief inbox-triage vault-health knowledge-graph qmd-reindex; do
+for label in discord imessage morning-brief eod-digest inbox-triage vault-health knowledge-graph qmd-reindex; do
   launchctl bootout gui/$(id -u)/com.cleo.$label || true
 done
 

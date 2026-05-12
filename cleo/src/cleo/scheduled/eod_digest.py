@@ -1,9 +1,10 @@
-"""Morning brief — posts a summary to #daily-brief at 8am via launchd.
+"""End-of-day digest — bracket to morning-brief.
 
-Loads the morning-brief skill from cleo/skills/ (or the vault override).
+Loads the eod-digest skill. Writable because the skill appends a one-line
+running-log entry to $OBSIDIAN_VAULT/CLEO.md.
 
 Usage:
-    python -m cleo.scheduled.morning_brief
+    python -m cleo.scheduled.eod_digest
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from ._util import post_webhook
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     settings = load()
-    text = await run_skill(settings, "morning-brief", writable=False)
+    text = await run_skill(settings, "eod-digest", writable=True)
     if settings.daily_brief_webhook:
         await post_webhook(settings.daily_brief_webhook, text)
     else:

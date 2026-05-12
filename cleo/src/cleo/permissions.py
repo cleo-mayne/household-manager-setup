@@ -50,7 +50,8 @@ def build_can_use_tool(settings: Settings, *, nanny_mode: bool, writable: bool):
     """Returns an async callback matching the SDK's can_use_tool signature."""
 
     vault = settings.obsidian_vault
-    allowed_write_roots = [vault / "inbox", vault / "daily"]
+    allowed_write_roots = [vault / "inbox", vault / "daily", vault / "projects", vault / "areas", vault / "resources", vault / "archives"]
+    allowed_write_files = {vault / "CLEO.md"}
 
     async def can_use_tool(tool_name: str, tool_input: dict[str, Any], _ctx: Any = None):
         name = tool_name.split("__")[-1]  # MCP tools arrive as "mcp__brain__search"
@@ -77,10 +78,19 @@ def build_can_use_tool(settings: Settings, *, nanny_mode: bool, writable: bool):
             target = tool_input.get("file_path") or tool_input.get("path") or ""
             if not target:
                 return {"behavior": "deny", "message": "Missing file_path."}
-            if not _under(Path(target), allowed_write_roots):
+            target_path = Path(target)
+            try:
+                target_resolved = target_path.resolve()
+            except OSError:
+                target_resolved = target_path
+            if target_resolved not in {f.resolve() for f in allowed_write_files} \
+                    and not _under(target_path, allowed_write_roots):
                 return {
                     "behavior": "deny",
-                    "message": f"Writes must land under {vault}/inbox or {vault}/daily.",
+                    "message": (
+                        f"Writes must land under one of: {', '.join(str(r) for r in allowed_write_roots)} "
+                        f"or be exactly $VAULT/CLEO.md."
+                    ),
                 }
 
         if name == "Bash":

@@ -13,6 +13,7 @@ Deep research across the five platform and runtime decisions:
 | **Task management** | [Stay on Todoist or migrate?](research/todoist-stay-or-migrate.md) | **Stay on Todoist** — best API + NLP combo, already integrated |
 | **Agent harness** | [Claude-tools-only rebuild](research/claude-tools-only.md) | **Ditch OpenClaw, rebuild on Claude Agent SDK** |
 | **Model backend** | [Local models feasibility](research/local-models.md) | **Stay on Claude API** — local is viable as a phase-2 hybrid, not a standalone move |
+| **Workspace pattern** | [Second-brain architecture](research/second-brain-architecture.md) | **PARA + root state file + skills-as-markdown + progressive disclosure**, after Meta's 60k-user deployment |
 
 ## TL;DR
 

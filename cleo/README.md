@@ -4,6 +4,10 @@ Replacement for the OpenClaw-hosted Cleo. Python, `claude-agent-sdk`, `discord.p
 
 **Deploying for the first time?** See [DEPLOY.md](DEPLOY.md) for the end-to-end runbook.
 
+## Architecture in one paragraph
+
+Borrowing from [Meta's AI Second Brain writeup](https://medium.com/@AnalyticsAtMeta/how-we-built-an-ai-second-brain-for-60k-knowledge-workers-78c507dd795b): the vault is organised on **PARA** (Projects / Areas / Resources / Archives) plus `inbox/`, `daily/`, `people/`; a root **`CLEO.md`** at the vault root holds the active portfolio that Cleo loads at session start; **skills** are reusable workflows written as plain markdown in `cleo/skills/` (or `$OBSIDIAN_VAULT/skills/` to override per-vault) and progressive-disclosed — the system prompt only lists each skill's one-liner, full instructions get read on demand; scheduled pipelines and on-demand @mentions both invoke the same skills via `run_skill()`, so there's one definition per workflow.
+
 ## Layout
 
 ```
@@ -13,16 +17,28 @@ cleo/
 ├── prompts/
 │   ├── cleo-system.md       # full family persona (playful, 🦞, opinionated)
 │   └── cleo-nanny-mode.md   # stripped-down, no personality, read-only
+├── skills/                  # reusable workflows — markdown only
+│   ├── _index.md            # one-line description per skill (progressive disclosure)
+│   ├── morning-brief.md
+│   ├── eod-digest.md
+│   ├── inbox-triage.md
+│   ├── vault-health.md
+│   ├── knowledge-graph.md
+│   ├── kid-handoff.md       # nanny-mode aware
+│   └── weekly-review.md
+├── templates/
+│   └── CLEO.md              # vault-root state file template (copy to $OBSIDIAN_VAULT/CLEO.md)
 ├── src/cleo/
 │   ├── config.py            # env loading, persona selection
-│   ├── agent.py             # ClaudeAgentOptions builder + one-shot helper
-│   ├── permissions.py       # can_use_tool callback (path scoping, bash blocklist)
+│   ├── agent.py             # ClaudeAgentOptions + run_skill(name) helper
+│   ├── permissions.py       # can_use_tool callback (PARA-scoped writes, bash blocklist)
 │   ├── conversation.py      # per-channel ClaudeSDKClient sessions (multi-turn memory)
 │   ├── discord_handler.py   # @mention listener, /reset, persona switching
 │   ├── imessage_handler.py  # BlueBubbles webhook receiver, same ConversationStore
-│   └── scheduled/
+│   └── scheduled/           # each pipeline = thin wrapper that calls run_skill(<name>)
 │       ├── morning_brief.py   # 8am → #daily-brief
-│       ├── inbox_triage.py    # hourly-ish → files vault/inbox/
+│       ├── eod_digest.py      # 9pm → #daily-brief
+│       ├── inbox_triage.py    # every 2h → files vault/inbox/
 │       ├── vault_health.py    # Sunday 7am → #cleo-log
 │       ├── knowledge_graph.py # daily 6am → link suggestions → #cleo-log
 │       └── qmd_reindex.py     # hourly → refresh qmd vault embeddings
@@ -30,11 +46,23 @@ cleo/
     ├── com.cleo.discord.plist
     ├── com.cleo.imessage.plist
     ├── com.cleo.morning-brief.plist
+    ├── com.cleo.eod-digest.plist
     ├── com.cleo.inbox-triage.plist
     ├── com.cleo.vault-health.plist
     ├── com.cleo.knowledge-graph.plist
     └── com.cleo.qmd-reindex.plist
 ```
+
+## Skills
+
+Skills are plain markdown files describing one workflow each. See [`skills/_index.md`](skills/_index.md) for the registry and authoring conventions. Two-line summary:
+
+- **Vault overrides repo.** `$OBSIDIAN_VAULT/skills/<name>.md` wins over `cleo/skills/<name>.md` — write personal skills in the vault, no PR needed.
+- **No restart.** Skills are read fresh each invocation. Edit a markdown file and the next run picks it up.
+
+## Vault state: `CLEO.md`
+
+Copy `templates/CLEO.md` to `$OBSIDIAN_VAULT/CLEO.md`. This is Cleo's persistent identity + active-portfolio file — what's running right now, who's in the household, what's the standing context. Cleo reads it at session start; `eod-digest` appends a one-line entry to its running log every night.
 
 ## Search: qmd (brain_search retired)
 
@@ -82,6 +110,7 @@ python -m cleo.imessage_handler
 
 # One-shot pipelines (for testing — launchd runs them on schedule)
 python -m cleo.scheduled.morning_brief
+python -m cleo.scheduled.eod_digest
 python -m cleo.scheduled.inbox_triage
 python -m cleo.scheduled.vault_health
 python -m cleo.scheduled.knowledge_graph
@@ -126,7 +155,7 @@ Defence-in-depth on top of `allowed_tools`. The `can_use_tool` callback inspects
 
 - **Nanny mode:** Write / Edit / Bash always denied.
 - **Read-only contexts (untrusted senders):** Write / Edit / Bash denied.
-- **Writes:** must land under `$OBSIDIAN_VAULT/inbox/` or `$OBSIDIAN_VAULT/daily/`. Writes elsewhere — plugins, config, `.obsidian/` — are rejected.
+- **Writes:** must land under one of the PARA dirs (`projects/`, `areas/`, `resources/`, `archives/`) or `inbox/` / `daily/`, OR be exactly `$OBSIDIAN_VAULT/CLEO.md`. Writes elsewhere — plugins, config, `.obsidian/` — are rejected.
 - **Bash:** blocks `rm -rf`, fork bombs, `dd if=`, `curl … | sh`, `sudo`, `mkfs`/`fdisk`.
 
 Tune in `permissions.py`. The callback is wired automatically via `build_options()`.

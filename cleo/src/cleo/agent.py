@@ -1,21 +1,34 @@
 """Shared Claude Agent SDK options + query helpers.
 
 The two entry points:
-- `run_one_shot(prompt, *, nanny_mode, writable)` for stateless pipeline calls
-  (morning-brief, inbox-triage, etc.)
-- `ConversationStore.reply(channel_id, prompt, *, nanny_mode, writable)` for
-  multi-turn chat where we want continuity across messages in a channel.
+- `run_skill(settings, skill_name, *, writable, nanny_mode)` for scheduled
+  pipelines (morning-brief, inbox-triage, etc.) — loads the named skill
+  from `cleo/skills/<name>.md` (vault override at `$OBSIDIAN_VAULT/skills/<name>.md`)
+  and runs it stateless.
+- `ConversationStore.reply(channel_id, prompt, ...)` for multi-turn chat.
 """
 
 from __future__ import annotations
+
+from pathlib import Path
 
 from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient, query
 
 from .config import Settings, system_prompt
 from .permissions import build_can_use_tool
 
+REPO_SKILLS_DIR = Path(__file__).resolve().parents[2] / "skills"
+
 FULL_TOOLS = ["Read", "Glob", "Grep", "Write", "Edit", "Bash"]
 READ_ONLY_TOOLS = ["Read", "Glob", "Grep"]
+
+
+def load_skill(settings: Settings, name: str) -> str:
+    """Vault override wins. Returns the markdown contents of the skill."""
+    vault_skill = settings.obsidian_vault / "skills" / f"{name}.md"
+    if vault_skill.exists():
+        return vault_skill.read_text()
+    return (REPO_SKILLS_DIR / f"{name}.md").read_text()
 
 
 def build_options(
@@ -34,9 +47,6 @@ def build_options(
         },
     }
     if settings.qmd_enabled:
-        # qmd's MCP server: hybrid BM25 + vector + LLM rerank search over the vault.
-        # `qmd mcp` speaks MCP on stdio; the index lives at ~/.cache/qmd/index.sqlite
-        # and is built by `qmd embed` (see scheduled/qmd_reindex.py).
         mcp_servers["qmd"] = {
             "command": settings.qmd_bin,
             "args": ["mcp"],
@@ -69,3 +79,25 @@ async def run_one_shot(
         if event.type == "assistant" and text:
             chunks.append(text)
     return "\n".join(chunks).strip()
+
+
+async def run_skill(
+    settings: Settings,
+    name: str,
+    *,
+    extra_context: str = "",
+    nanny_mode: bool = False,
+    writable: bool = False,
+) -> str:
+    """Load a named skill and execute it as a one-shot.
+
+    The skill markdown becomes the user prompt — the system prompt already
+    instructs Cleo on how to execute skill files.
+    """
+    skill = load_skill(settings, name)
+    prompt = f"Run skill: {name}\n\n---\n\n{skill}"
+    if extra_context:
+        prompt += f"\n\n---\n\n## Additional context\n\n{extra_context}"
+    return await run_one_shot(
+        settings, prompt, nanny_mode=nanny_mode, writable=writable
+    )
