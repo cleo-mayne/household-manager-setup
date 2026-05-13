@@ -128,16 +128,26 @@ Fill every variable from step 2. Double-check:
 
 ## 4. Smoke test (do not skip)
 
-Verify the agent loop works before installing launchd jobs.
+Verify the agent loop works before installing launchd jobs. **Do not skip step 4a** — the bare-metal SDK check is independent of every other moving part and tells you fast whether the SDK surface matches the scaffold.
+
+### 4a. SDK-only smoke (30 seconds)
 
 ```bash
 source .venv/bin/activate
 export $(grep -v '^#' .env | xargs)
+python scripts/smoke.py
+```
 
+Expected output ends with `Smoke test passed. The SDK is callable.`
+
+If this **fails**, fix it before touching anything else — see "Known SDK surface caveats" at the bottom of this doc. None of the pipelines will run until this does.
+
+### 4b. Pipeline + handlers (full)
+
+```bash
 # 1. One-shot pipeline (no Discord/iMessage involvement)
 python -m cleo.scheduled.morning_brief
 # Expect: a markdown brief printed to stdout (webhook posts only if URL is set).
-# If you get an ImportError on claude_agent_sdk, check the SDK version + import paths.
 
 # 2. Discord bot, foreground
 python -m cleo.discord_handler
@@ -259,3 +269,22 @@ If you need to debug a stuck job, `launchctl print gui/$(id -u)/com.cleo.<label>
 **Cost watch:**
 - `logs/*.err.log` will surface 429/quota errors loudly.
 - For per-call cost visibility, instrument `agent.py:run_one_shot` to log token usage from the `result` event before shipping prompt-caching.
+
+---
+
+## Known SDK surface caveats
+
+This scaffold was written against the docs without a live `claude-agent-sdk` install. A pre-deploy audit flagged three places where the real SDK probably differs from the code shipped here. Expect the smoke test (§4a) to surface at least one of these, and patch as follows:
+
+| What I wrote in `agent.py` / `permissions.py` | What the SDK likely wants | Where to fix |
+|---|---|---|
+| `ClaudeAgentOptions(can_use_tool=callback, ...)` — a single permission callback | **Hooks instead.** `ClaudeAgentOptions(hooks={"PreToolUse": [{"matcher": "...", "hooks": [callback]}]})`. Callback signature is `async def(input_data, tool_use_id, context)` returning `{"hookSpecificOutput": {"permissionDecision": "deny|allow", "permissionDecisionReason": "..."}}`. | `agent.py:build_options`, `permissions.py:build_can_use_tool` |
+| `ClaudeAgentOptions(model="claude-sonnet-4-6", ...)` | `model` may not be a constructor kwarg. If `TypeError: unexpected keyword argument 'model'`, drop the kwarg from `build_options` and set `ANTHROPIC_MODEL=claude-sonnet-4-6` in `.env` instead. | `agent.py:build_options` (remove the `model=` line) |
+| `async for event in query(...): if event.type == "assistant" and getattr(event, "text", None): chunks.append(event.text)` | Real events are likely **typed message classes**: `from claude_agent_sdk import AssistantMessage, TextBlock; if isinstance(event, AssistantMessage): for block in event.content: if isinstance(block, TextBlock): chunks.append(block.text)`. | `agent.py:run_one_shot`, `conversation.py:ConversationStore.reply` |
+| `client = ClaudeSDKClient(options=options); await client.connect(); ... ; await client.disconnect()` | `async with ClaudeSDKClient(options=options) as client: ...` (context-manager form). May still expose explicit connect/disconnect for our use case where we cache clients across requests; verify against the docs. | `conversation.py:ConversationStore` |
+| `mcp_servers={"brain": {"command": "...", "args": [...], "env": {...}}}` | Shape is plausibly right but the value may need to be a typed object (`StdioServerParameters` or similar). If MCP setup fails specifically, check the SDK's MCP examples. | `agent.py:build_options` |
+
+**Order of operations if smoke fails:**
+1. Get §4a passing — that's just imports + a trivial query. If `query()` rejects `ClaudeAgentOptions(system_prompt=...)`, that's the only SDK shape problem and you can fix all the rest mechanically.
+2. Once §4a passes, run `python -m cleo.scheduled.morning_brief` (§4b step 1) — it exercises the full options builder including MCP and hooks. Whatever it complains about is the next fix.
+3. Don't move to Discord / iMessage until both of the above are clean.
